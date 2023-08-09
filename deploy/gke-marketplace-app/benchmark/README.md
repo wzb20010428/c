@@ -74,9 +74,10 @@ When deploy Triton GKE application, point the model repository to directory cont
 
 We use perf analyzer of Triton to benchmark the performance of each model, the perf analyzer reside in another pod of the GKE cluster.
 ```bash
-export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
-bash perf_query.sh 35.194.5.119:80 bert_base_trt_gpu 384
+> kubectl get ingress
+NAME              CLASS    HOSTS   ADDRESS          PORTS   AGE
+triton-external   <none>   *       35.186.215.182   80      107s
+bash perf_query.sh 35.186.215.182:80 bert_base_trt_gpu 384
 ```
 
 We deploy model on n1-standard-96 for CPU BERT BASE and Distill BERT and (n1-standard-4 + T4) for GPU BERT models, the sequence length  of the BERT model is 384 token, and measure the latency/throughput with a concurrency sweep with Triton's performance analyzer. The latency includes Istio ingress/load balancing and reflect the true round trip cost in the same GCP zone.
@@ -90,6 +91,5 @@ GPU Distill BERT: latency: 118ms, throughput: 73.3 qps
 GPU TensorRT BERT BASE: latency: 50ms, throughput: 465 qps
 
 With n1-standard-96 priced at $4.56/hr and n1-standard-4 at $0.19/hr and T4 at $0.35/hr totaling $0.54/hr. While achieving a much lower latency, the TCO of BERT inference with TensorRT on T4 is over 163 times that of Distill BERT inference on n1-standard-96.
-
 
 
