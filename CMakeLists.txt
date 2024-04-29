@@ -107,6 +107,9 @@ if(TRITON_ENABLE_ASAN AND TRITON_ENABLE_GPU)
   message(FATAL_ERROR "TRITON_ENABLE_ASAN=ON requires TRITON_ENABLE_GPU=OFF")
 endif()
 
+# Append $TRITON_THIRD_PARTY_INSTALL_PREFIX to $CMAKE_PREFIX_PATH in order to be searchable for third party dependency
+list(APPEND CMAKE_PREFIX_PATH ${TRITON_THIRD_PARTY_INSTALL_PREFIX})
+
 #
 # Dependencies
 #
@@ -224,6 +227,7 @@ ExternalProject_Add(triton-server
     -Dc-ares_DIR:PATH=${TRITON_THIRD_PARTY_INSTALL_PREFIX}/c-ares/${LIB_DIR}/cmake/c-ares
     -Dre2_DIR:PATH=${TRITON_THIRD_PARTY_INSTALL_PREFIX}/re2/${LIB_DIR}/cmake/re2
     -Dabsl_DIR:PATH=${TRITON_THIRD_PARTY_INSTALL_PREFIX}/absl/${LIB_DIR}/cmake/absl
+    -Dutf8_range_DIR:PATH=${TRITON_THIRD_PARTY_INSTALL_PREFIX}/utf8_range/${LIB_DIR}/cmake/utf8_range
     -DCURL_DIR:STRING=${TRITON_THIRD_PARTY_INSTALL_PREFIX}/curl/${LIB_DIR}/cmake/CURL
     -Dnlohmann_json_DIR:PATH=${TRITON_THIRD_PARTY_INSTALL_PREFIX}/nlohmann_json/${LIB_DIR}/cmake/nlohmann_json
     -DLibevent_DIR:PATH=${TRITON_THIRD_PARTY_INSTALL_PREFIX}/libevent/lib/cmake/libevent
