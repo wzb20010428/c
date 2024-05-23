@@ -38,6 +38,7 @@
 #include "triton/common/triton_json.h"
 
 #ifdef TRITON_ENABLE_GPU
+#include <cuda.h>
 #include <cuda_runtime_api.h>
 #endif  // TRITON_ENABLE_GPU
 
@@ -82,6 +83,7 @@ class SharedMemoryManager {
   /// if named block doesn't exist.
   /// \param name The name of the shared memory block to get.
   /// \param offset The offset in the block
+  /// \param byte_size The byte size to request for the shm region
   /// \param shm_mapped_addr Returns the pointer to the shared
   /// memory block with the specified name and offset
   /// \param memory_type Returns the type of the memory
@@ -89,8 +91,9 @@ class SharedMemoryManager {
   /// memory block
   /// \return a TRITONSERVER_Error indicating success or failure.
   TRITONSERVER_Error* GetMemoryInfo(
-      const std::string& name, size_t offset, void** shm_mapped_addr,
-      TRITONSERVER_MemoryType* memory_type, int64_t* device_id);
+      const std::string& name, size_t offset, size_t byte_size,
+      void** shm_mapped_addr, TRITONSERVER_MemoryType* memory_type,
+      int64_t* device_id);
 
   /// Populates the status of active system/CUDA shared memory regions
   /// in the status JSON. If 'name' is empty then return status of all

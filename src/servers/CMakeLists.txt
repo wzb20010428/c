@@ -252,6 +252,7 @@ if(${TRITON_ENABLE_GPU})
 target_link_libraries(
   main
   PRIVATE ${CUDA_LIBRARIES}
+  CUDA::cudart
 )
 endif() # TRITON_ENABLE_GPU
 install(

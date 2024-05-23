@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
+# Copyright 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -49,7 +49,10 @@ for i in \
         test_register_after_inference \
         test_too_big_shm \
         test_mixed_raw_shm \
-        test_unregisterall; do
+        test_unregisterall \
+        test_infer_offset_out_of_bound \
+        test_infer_byte_size_out_of_bound \
+        test_register_out_of_bound; do
     for client_type in http grpc; do
         SERVER_ARGS="--model-repository=`pwd`/models --log-verbose=1 ${SERVER_ARGS_EXTRA}"
         SERVER_LOG="./$i.$client_type.serverlog"
@@ -61,32 +64,38 @@ for i in \
         fi
 
         export CLIENT_TYPE=$client_type
-        echo "Test: $i, client type: $client_type" >>$CLIENT_LOG
+        TMP_CLIENT_LOG="./tmp_client.log"
+        echo "Test: $i, client type: $client_type" >>$TMP_CLIENT_LOG
 
         set +e
-        python $SHM_TEST SharedMemoryTest.$i >>$CLIENT_LOG 2>&1
+        python3 $SHM_TEST SharedMemoryTest.$i >>$TMP_CLIENT_LOG 2>&1
         if [ $? -ne 0 ]; then
+            cat $TMP_CLIENT_LOG
             echo -e "\n***\n*** Test Failed\n***"
             RET=1
         else
             check_test_results $TEST_RESULT_FILE 1
             if [ $? -ne 0 ]; then
-                cat $CLIENT_LOG
+                cat $TEST_RESULT_FILE
                 echo -e "\n***\n*** Test Result Verification Failed\n***"
                 RET=1
             fi
         fi
-        set -e
-
+        cat $TMP_CLIENT_LOG >>$CLIENT_LOG
+        rm $TMP_CLIENT_LOG
         kill $SERVER_PID
         wait $SERVER_PID
+        if [ $? -ne 0 ]; then
+            echo -e "\n***\n*** Test Server shut down non-gracefully\n***"
+            RET=1
+        fi
+        set -e
     done
 done
 
 if [ $RET -eq 0 ]; then
     echo -e "\n***\n*** Test Passed\n***"
 else
-    cat $CLIENT_LOG
     echo -e "\n***\n*** Test Failed\n***"
 fi
 
