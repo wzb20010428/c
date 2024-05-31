@@ -275,8 +275,8 @@ class LifeCycleTest(tu.TestResultCollector):
                                                np.float32, np.float32)
 
                 # expecting ready because not strict readiness
-                self.assertTrue(triton_client.is_server_live())
-                self.assertTrue(triton_client.is_server_ready())
+                self.assertTrue(triton_client.is_server_live(), "Expected server is live but it's not")
+                self.assertTrue(triton_client.is_server_ready(), "Expected server ready but it's not")
 
                 md = triton_client.get_model_metadata(model_name, "1")
                 self.assertTrue(
@@ -1610,10 +1610,10 @@ class LifeCycleTest(tu.TestResultCollector):
         # and the model platform is TensorRT
         try:
             triton_client = self._get_client(use_grpc)
-            self.assertTrue(triton_client.is_server_live())
-            self.assertTrue(triton_client.is_server_ready())
-            self.assertTrue(triton_client.is_model_ready(model_name, "1"))
-            self.assertTrue(triton_client.is_model_ready(model_name, "3"))
+            self.assertTrue(triton_client.is_server_live(), "server is not live")
+            self.assertTrue(triton_client.is_server_ready(), "server is not ready")
+            self.assertTrue(triton_client.is_model_ready(model_name, "1"), "model 1 is not ready")
+            self.assertTrue(triton_client.is_model_ready(model_name, "3"), "model 3 is not ready") 
             if use_grpc:
                 metadata = triton_client.get_model_metadata(model_name,
                                                             as_json=True)
@@ -1644,10 +1644,10 @@ class LifeCycleTest(tu.TestResultCollector):
         # and the model platform is PyTorch
         try:
             triton_client = self._get_client(use_grpc)
-            self.assertTrue(triton_client.is_server_live())
-            self.assertTrue(triton_client.is_server_ready())
-            self.assertTrue(triton_client.is_model_ready(model_name, "1"))
-            self.assertTrue(triton_client.is_model_ready(model_name, "3"))
+            self.assertTrue(triton_client.is_server_live(), "server is not live")
+            self.assertTrue(triton_client.is_server_ready(), "server is not ready")
+            self.assertTrue(triton_client.is_model_ready(model_name, "1"), " model 1 is not ready")
+            self.assertTrue(triton_client.is_model_ready(model_name, "3"), "model 3 is not ready")
             if use_grpc:
                 metadata = triton_client.get_model_metadata(model_name,
                                                             as_json=True)

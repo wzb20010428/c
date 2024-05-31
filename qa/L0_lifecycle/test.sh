@@ -382,6 +382,7 @@ set +e
 python $LC_TEST LifeCycleTest.test_parse_error_model_no_version >>$CLIENT_LOG 2>&1
 if [ $? -ne 0 ]; then
     echo -e "\n***\n*** Test Failed\n***"
+    cat $CLIENT_LOG
     RET=1
 else
     check_test_results $TEST_RESULT_FILE 1
@@ -1203,6 +1204,7 @@ for protocol in grpc http; do
     set +e
     python $LC_TEST LifeCycleTest.test_load_same_model_different_platform >>$CLIENT_LOG 2>&1
     if [ $? -ne 0 ]; then
+        cat $CLIENT_LOG
         echo -e "\n***\n*** Test Failed\n***"
         RET=1
     else
