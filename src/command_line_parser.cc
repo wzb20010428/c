@@ -29,7 +29,6 @@
 constexpr const char* GLOBAL_OPTION_GROUP = "";
 
 #ifdef _WIN32
-#include <iostream>
 int optind = 1;
 const char* optarg = nullptr;
 
