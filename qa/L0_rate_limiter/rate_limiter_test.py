@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@ import sys
 
 sys.path.append("../common")
 
+import concurrent.futures
 import functools
 import os
 import threading
@@ -310,6 +311,43 @@ class RateLimiterTest(su.SequenceBatcherTestUtil):
             self.check_status(model_name, {1: 9}, 9, 9)
         except Exception as ex:
             self.assertTrue(False, "unexpected error {}".format(ex))
+
+    def test_concurrent_load_with_infer(self):
+        model_prefix = "model_"
+        num_models = 2048
+        num_threads = 64
+
+        self.assertEqual(num_models % num_threads, 0)
+        block_size = int(num_models / num_threads)
+
+        with grpcclient.InferenceServerClient("localhost:8001", verbose=True) as client:
+
+            def _infer(model_name):
+                shape = [16]
+                input0_data = np.random.rand(*shape).astype(np.int32)
+                inputs = [grpcclient.InferInput("INPUT0", shape, "INT32")]
+                inputs[0].set_data_from_numpy(input0_data)
+                response = client.infer(model_name, inputs)
+                output0_data = response.as_numpy("OUTPUT0")
+                self.assertTrue(np.allclose(input0_data, output0_data))
+
+            def _load_and_infer(start_idx, end_idx):
+                for i in range(start_idx, end_idx):
+                    model_name = model_prefix + str(i)
+                    client.load_model(model_name)
+                    _infer(model_name)
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                threads = []
+                for i in range(num_threads):
+                    start_idx = i * block_size
+                    end_idx = start_idx + block_size
+                    threads.append(pool.submit(_load_and_infer, start_idx, end_idx))
+                for t in threads:
+                    t.result()
+
+            self.assertTrue(client.is_server_live())
+            self.assertTrue(client.is_server_ready())
 
 
 if __name__ == "__main__":

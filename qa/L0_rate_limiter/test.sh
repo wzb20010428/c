@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -457,6 +457,43 @@ else
         echo -e "\n***\n*** Test Result Verification Failed\n***"
         RET=1
     fi
+fi
+set -e
+
+kill $SERVER_PID
+wait $SERVER_PID
+
+##
+## Test concurrent model loading with inference with rate limiter on
+##
+# Load many models in parallel and inference with rate limiter on. The server
+# must not crash.
+rm -rf models && mkdir models
+for i in {0..2047}; do
+    mkdir -p models/model_$i/1 && (cd models/model_$i && \
+        echo 'backend: "identity"' >> config.pbtxt && \
+        echo -e 'input [{ name: "INPUT0" \n data_type: TYPE_INT32 \n dims: [ -1 ] }]' >> config.pbtxt && \
+        echo -e 'output [{ name: "OUTPUT0" \n data_type: TYPE_INT32 \n dims: [ -1 ] }]' >> config.pbtxt && \
+        echo -e 'instance_group [{ kind: KIND_CPU \n count: 1 }]' >> config.pbtxt)
+done
+
+CLIENT_LOG="test_concurrent_load_with_infer.log"
+SERVER_LOG="test_concurrent_load_with_infer.server.log"
+
+SERVER_ARGS="--model-control-mode=explicit --model-repository=$MODELDIR/models --rate-limit=execution_count --model-load-thread-count=64"
+run_server
+if [ "$SERVER_PID" == "0" ]; then
+    echo -e "\n***\n*** Failed to start $SERVER\n***"
+    cat $SERVER_LOG
+    exit 1
+fi
+
+set +e
+python3 $RATE_LIMITER_TEST RateLimiterTest.test_concurrent_load_with_infer >>$CLIENT_LOG 2>&1
+if [ $? -ne 0 ]; then
+    echo -e "\n***\n*** Failed test_concurrent_load_with_infer\n***"
+    cat $CLIENT_LOG
+    RET=1
 fi
 set -e
 
