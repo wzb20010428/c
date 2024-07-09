@@ -597,6 +597,17 @@ ModelStreamInferHandler::StreamInferResponseComplete(
 {
   State* state = reinterpret_cast<State*>(userp);
 
+  // Print the duration to first respond.
+  if (!state->first_response_received_) {
+    uint64_t first_respond_time =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+    LOG_INFO << "gRPC server TTFT: "
+             << first_respond_time - state->state_start_time_ << " ms";
+    state->first_response_received_ = true;
+  }
+
   // Increment the callback index
   uint32_t response_index = state->cb_count_++;
 

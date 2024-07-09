@@ -1061,6 +1061,11 @@ class InferHandlerState {
     // wrapper state object in WAITING_NOTIFICATION step.
     state_ptr_ = nullptr;
     async_notify_state_ = false;
+    // Record the time the state is ready for a new request.
+    state_start_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now().time_since_epoch())
+                            .count();
+    first_response_received_ = false;
   }
 
   void Release()
@@ -1142,6 +1147,10 @@ class InferHandlerState {
   // Tracks whether this state object has been wrapped and send to
   // AsyncNotifyWhenDone() function as a tag.
   bool async_notify_state_;
+
+  // For debugging time to first response (TTFT)
+  uint64_t state_start_time_;
+  bool first_response_received_;
 };
 
 
