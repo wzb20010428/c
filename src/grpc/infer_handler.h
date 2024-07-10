@@ -981,6 +981,7 @@ class InferHandlerState {
 
     // Ready to write queue for decoupled
     std::queue<InferHandlerStateType*> ready_to_write_states_;
+    std::queue<InferHandlerStateType*> ready_to_write_states_first_class_;
 
     // The step of the entire context.
     Steps step_;
@@ -1033,6 +1034,22 @@ class InferHandlerState {
       delay_process_ms_ = atoi(pstr);
     }
 
+    // For testing first response prioritization. If the first response of a
+    // request is waited for the duration within the min and max range, the
+    // response will be sent with priority.
+    const char* priority_min_str =
+        getenv("TRITONSERVER_PRIORITY_GRPC_FIRST_RESPONSE_MIN");
+    priority_first_response_min_ms_ = std::numeric_limits<uint64_t>::max();
+    if (priority_min_str != nullptr) {
+      priority_first_response_min_ms_ = atoi(priority_min_str);
+    }
+    const char* priority_max_str =
+        getenv("TRITONSERVER_PRIORITY_GRPC_FIRST_RESPONSE_MAX");
+    priority_first_response_max_ms_ = 0;
+    if (priority_max_str != nullptr) {
+      priority_first_response_max_ms_ = atoi(priority_max_str);
+    }
+
     response_queue_.reset(new ResponseQueue<ResponseType>());
     Reset(context, start_step);
   }
@@ -1066,6 +1083,7 @@ class InferHandlerState {
     first_response_receive_time_ = 0;
     first_response_write_start_time_ = 0;
     first_response_write_end_time_ = 0;
+    print_first_response_time_ = false;
   }
 
   void Release()
@@ -1135,6 +1153,16 @@ class InferHandlerState {
   int delay_complete_ms_;
   int delay_process_ms_;
 
+  // For testing first response prioritization.
+  uint64_t priority_first_response_min_ms_;
+  uint64_t priority_first_response_max_ms_;
+  uint64_t request_start_time_;
+  uint64_t first_response_receive_time_;
+  std::mutex first_response_receive_time_mu_;
+  uint64_t first_response_write_start_time_;
+  uint64_t first_response_write_end_time_;
+  bool print_first_response_time_;
+
   // For inference requests the allocator payload, unused for other
   // requests.
   AllocPayload<ResponseType> alloc_payload_;
@@ -1147,13 +1175,6 @@ class InferHandlerState {
   // Tracks whether this state object has been wrapped and send to
   // AsyncNotifyWhenDone() function as a tag.
   bool async_notify_state_;
-
-  // For debugging time to first response (TTFT)
-  uint64_t request_start_time_;
-  uint64_t first_response_receive_time_;
-  std::mutex first_response_receive_time_mu_;
-  uint64_t first_response_write_start_time_;
-  uint64_t first_response_write_end_time_;
 };
 
 

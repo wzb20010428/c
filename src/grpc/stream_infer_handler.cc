@@ -389,8 +389,14 @@ ModelStreamInferHandler::Process(InferHandler::State* state, bool rpc_ok)
             // a written state and no additional response on the stream is ready
             // to be written.
             state->context_->ongoing_write_ = true;
-            writing_state = state->context_->ready_to_write_states_.front();
-            state->context_->ready_to_write_states_.pop();
+            if (state->context_->ready_to_write_states_first_class_.empty()) {
+              writing_state =
+                  state->context_->ready_to_write_states_first_class_.front();
+              state->context_->ready_to_write_states_first_class_.pop();
+            } else {
+              writing_state = state->context_->ready_to_write_states_.front();
+              state->context_->ready_to_write_states_.pop();
+            }
           }
           state->complete_ = true;
         }
@@ -483,7 +489,8 @@ ModelStreamInferHandler::Process(InferHandler::State* state, bool rpc_ok)
     //
     if (state->step_ == Steps::WRITTEN) {
       // Record time when first respond ends writing.
-      if (state->first_response_write_end_time_ == 0) {
+      if (state->print_first_response_time_ &&
+          state->first_response_write_end_time_ == 0) {
         state->first_response_write_end_time_ =
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now().time_since_epoch())
@@ -522,9 +529,16 @@ ModelStreamInferHandler::Process(InferHandler::State* state, bool rpc_ok)
         std::lock_guard<std::recursive_mutex> lk1(state->context_->mu_);
         {
           std::lock_guard<std::recursive_mutex> lk2(state->step_mtx_);
-          if (!state->context_->ready_to_write_states_.empty()) {
-            writing_state = state->context_->ready_to_write_states_.front();
-            state->context_->ready_to_write_states_.pop();
+          if (!state->context_->ready_to_write_states_.empty() ||
+              !state->context_->ready_to_write_states_first_class_.empty()) {
+            if (!state->context_->ready_to_write_states_first_class_.empty()) {
+              writing_state =
+                  state->context_->ready_to_write_states_first_class_.front();
+              state->context_->ready_to_write_states_first_class_.pop();
+            } else {
+              writing_state = state->context_->ready_to_write_states_.front();
+              state->context_->ready_to_write_states_.pop();
+            }
           } else {
             state->context_->ongoing_write_ = false;
           }
@@ -628,7 +642,9 @@ ModelStreamInferHandler::StreamInferResponseComplete(
 {
   State* state = reinterpret_cast<State*>(userp);
 
-  // Record time when first response is received.
+  // Record time when first response is received, and decide if prioritization
+  // is needed.
+  bool prioritize_response = false;
   if (state->first_response_receive_time_ == 0) {
     std::lock_guard<std::mutex> lk(state->first_response_receive_time_mu_);
     if (state->first_response_receive_time_ == 0) {
@@ -636,6 +652,22 @@ ModelStreamInferHandler::StreamInferResponseComplete(
           std::chrono::duration_cast<std::chrono::milliseconds>(
               std::chrono::steady_clock::now().time_since_epoch())
               .count();
+      uint64_t time_to_first_response =
+          state->first_response_receive_time_ - state->request_start_time_;
+      if (time_to_first_response >= state->priority_first_response_min_ms_ &&
+          time_to_first_response < state->priority_first_response_max_ms_) {
+        LOG_INFO << "gRPC server prioritizing first response: backend TTFT = "
+                 << time_to_first_response << " ms";
+        prioritize_response = true;
+        state->print_first_response_time_ = true;
+      } else if (
+          state->priority_first_response_max_ms_ != 0 &&
+          time_to_first_response >= state->priority_first_response_max_ms_) {
+        LOG_INFO << "gRPC server received first response exceeded max "
+                    "threshold: backend TTFT = "
+                 << time_to_first_response << " ms";
+        state->print_first_response_time_ = true;
+      }
     }
   }
 
@@ -814,13 +846,24 @@ ModelStreamInferHandler::StreamInferResponseComplete(
         state->response_queue_->MarkNextResponseComplete();
       }
       if (!has_prev_ready_response && response) {
-        state->context_->ready_to_write_states_.push(state);
+        if (prioritize_response) {
+          state->context_->ready_to_write_states_first_class_.push(state);
+        } else {
+          state->context_->ready_to_write_states_.push(state);
+        }
       }
       if (!state->context_->ongoing_write_ &&
-          !state->context_->ready_to_write_states_.empty()) {
+          (!state->context_->ready_to_write_states_.empty() ||
+           !state->context_->ready_to_write_states_first_class_.empty())) {
         state->context_->ongoing_write_ = true;
-        writing_state = state->context_->ready_to_write_states_.front();
-        state->context_->ready_to_write_states_.pop();
+        if (!state->context_->ready_to_write_states_first_class_.empty()) {
+          writing_state =
+              state->context_->ready_to_write_states_first_class_.front();
+          state->context_->ready_to_write_states_first_class_.pop();
+        } else {
+          writing_state = state->context_->ready_to_write_states_.front();
+          state->context_->ready_to_write_states_.pop();
+        }
       }
       if (is_complete && state->response_queue_->IsEmpty() &&
           state->step_ == Steps::ISSUED) {
