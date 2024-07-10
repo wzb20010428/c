@@ -476,6 +476,7 @@ ModelStreamInferHandler::Process(InferHandler::State* state, bool rpc_ok)
     //  Decoupled state transitions
     //
     if (state->step_ == Steps::WRITTEN) {
+      // Record time when first respond ends writing.
       if (state->first_response_write_end_time_ == 0) {
         state->first_response_write_end_time_ =
             std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -623,10 +624,13 @@ ModelStreamInferHandler::StreamInferResponseComplete(
 
   // Record time when first response is received.
   if (state->first_response_receive_time_ == 0) {
-    state->first_response_receive_time_ =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now().time_since_epoch())
-            .count();
+    std::lock_guard<std::mutex> lk(state->first_response_receive_time_mu_);
+    if (state->first_response_receive_time_ == 0) {
+      state->first_response_receive_time_ =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::steady_clock::now().time_since_epoch())
+              .count();
+    }
   }
 
   // Increment the callback index

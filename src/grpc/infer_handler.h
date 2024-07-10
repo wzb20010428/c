@@ -1154,6 +1154,7 @@ class InferHandlerState {
   // For debugging time to first response (TTFT)
   uint64_t request_start_time_;
   uint64_t first_response_receive_time_;
+  std::mutex first_response_receive_time_mu_;
   uint64_t first_response_write_start_time_;
   uint64_t first_response_write_end_time_;
 };
