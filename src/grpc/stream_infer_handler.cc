@@ -476,6 +476,23 @@ ModelStreamInferHandler::Process(InferHandler::State* state, bool rpc_ok)
     //  Decoupled state transitions
     //
     if (state->step_ == Steps::WRITTEN) {
+      if (state->first_response_write_end_time_ == 0) {
+        state->first_response_write_end_time_ =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count();
+        LOG_INFO << "gRPC server TTFT: backend = "
+                 << state->first_response_receive_time_ -
+                        state->request_start_time_
+                 << " ms; queue = "
+                 << state->first_response_write_start_time_ -
+                        state->first_response_receive_time_
+                 << " ms; write = "
+                 << state->first_response_write_end_time_ -
+                        state->first_response_write_start_time_
+                 << " ms";
+      }
+
 #ifdef TRITON_ENABLE_TRACING
       state->trace_timestamps_.emplace_back(
           std::make_pair("GRPC_SEND_END", TraceManager::CaptureTimestamp()));
@@ -551,6 +568,13 @@ ModelStreamInferHandler::StateWriteResponse(InferHandler::State* state)
     std::this_thread::sleep_for(
         std::chrono::milliseconds(state->delay_response_ms_));
   }
+  // Record time when first respond starts writing.
+  if (state->first_response_write_start_time_ == 0) {
+    state->first_response_write_start_time_ =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+  }
   {
     std::lock_guard<std::recursive_mutex> lock(state->step_mtx_);
     state->step_ = Steps::WRITTEN;
@@ -597,15 +621,12 @@ ModelStreamInferHandler::StreamInferResponseComplete(
 {
   State* state = reinterpret_cast<State*>(userp);
 
-  // Print the duration to first respond.
-  if (!state->first_response_received_) {
-    uint64_t first_respond_time =
+  // Record time when first response is received.
+  if (state->first_response_receive_time_ == 0) {
+    state->first_response_receive_time_ =
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now().time_since_epoch())
             .count();
-    LOG_INFO << "gRPC server TTFT: "
-             << first_respond_time - state->state_start_time_ << " ms";
-    state->first_response_received_ = true;
   }
 
   // Increment the callback index

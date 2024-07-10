@@ -1062,10 +1062,13 @@ class InferHandlerState {
     state_ptr_ = nullptr;
     async_notify_state_ = false;
     // Record the time the state is ready for a new request.
-    state_start_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            std::chrono::steady_clock::now().time_since_epoch())
-                            .count();
-    first_response_received_ = false;
+    request_start_time_ =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+    first_response_receive_time_ = 0;
+    first_response_write_start_time_ = 0;
+    first_response_write_end_time_ = 0;
   }
 
   void Release()
@@ -1149,8 +1152,10 @@ class InferHandlerState {
   bool async_notify_state_;
 
   // For debugging time to first response (TTFT)
-  uint64_t state_start_time_;
-  bool first_response_received_;
+  uint64_t request_start_time_;
+  uint64_t first_response_receive_time_;
+  uint64_t first_response_write_start_time_;
+  uint64_t first_response_write_end_time_;
 };
 
 
