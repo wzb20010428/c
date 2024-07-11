@@ -191,6 +191,12 @@ ModelStreamInferHandler::Process(InferHandler::State* state, bool rpc_ok)
     }
 
   } else if (state->step_ == Steps::READ) {
+    // Record time when the request starts.
+    state->request_start_time_ =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+
     TRITONSERVER_Error* err = nullptr;
     const inference::ModelInferRequest& request = state->request_;
 #ifdef TRITON_ENABLE_TRACING

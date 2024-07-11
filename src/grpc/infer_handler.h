@@ -1061,11 +1061,8 @@ class InferHandlerState {
     // wrapper state object in WAITING_NOTIFICATION step.
     state_ptr_ = nullptr;
     async_notify_state_ = false;
-    // Record the time the state is ready for a new request.
-    request_start_time_ =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now().time_since_epoch())
-            .count();
+    // Reset times for first response statistics.
+    request_start_time_ = 0;
     first_response_receive_time_ = 0;
     first_response_write_start_time_ = 0;
     first_response_write_end_time_ = 0;
