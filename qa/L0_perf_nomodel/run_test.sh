@@ -185,7 +185,7 @@ for BACKEND in $BACKENDS; do
     set +e
     set -o pipefail
     PA_MAX_TRIALS=${PA_MAX_TRIALS:-"50"}
-    $PERF_CLIENT -v -v\
+    $PERF_CLIENT -v -v \
                  -p${PERF_CLIENT_STABILIZE_WINDOW} \
                  -s${PERF_CLIENT_STABILIZE_THRESHOLD} \
                  ${PERF_CLIENT_EXTRA_ARGS} \
