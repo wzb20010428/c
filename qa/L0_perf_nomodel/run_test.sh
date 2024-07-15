@@ -184,7 +184,7 @@ for BACKEND in $BACKENDS; do
     echo "Time before perf analyzer trials: $(date)"
     set +e
     set -o pipefail
-    PA_MAX_TRIALS=${PA_MAX_TRIALS:-"50"}
+    PA_MAX_TRIALS=10 #${PA_MAX_TRIALS:-"50"}
     $PERF_CLIENT -v \
                  -p${PERF_CLIENT_STABILIZE_WINDOW} \
                  -s${PERF_CLIENT_STABILIZE_THRESHOLD} \
@@ -192,6 +192,7 @@ for BACKEND in $BACKENDS; do
                  -m ${MODEL_NAME} \
                  -b${STATIC_BATCH} -t${CONCURRENCY} \
                  --max-trials "${PA_MAX_TRIALS}" \
+                 --request-count=50000 \
                  --shape ${INPUT_NAME}:${SHAPE} \
                  ${SERVICE_ARGS} \
                  -f ${RESULTDIR}/${NAME}.csv 2>&1 | tee ${RESULTDIR}/${NAME}.log
