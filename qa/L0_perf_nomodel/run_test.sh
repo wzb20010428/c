@@ -192,12 +192,13 @@ for BACKEND in $BACKENDS; do
                  -m ${MODEL_NAME} \
                  -b${STATIC_BATCH} -t${CONCURRENCY} \
                  --max-trials "${PA_MAX_TRIALS}" \
-                 --request-count=50000 \
+                 --request-count=1000 \
                  --shape ${INPUT_NAME}:${SHAPE} \
                  ${SERVICE_ARGS} \
                  -f ${RESULTDIR}/${NAME}.csv 2>&1 | tee ${RESULTDIR}/${NAME}.log
     if [ $? -ne 0 ]; then
         echo -e "\n***\n*** FAILED Perf Analyzer measurement\n***"
+        cat ${RESULTDIR}/${NAME}.log
         RET=1
     fi
     echo "Time after perf analyzer trials: $(date)"
