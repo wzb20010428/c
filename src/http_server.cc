@@ -2326,6 +2326,13 @@ HTTPAPIServer::HandleSystemSharedMemory(
             }
           }
 
+          std::cerr << "************************* HTTPAPIServer::HandleSystemSharedMemory() ******************************"
+               << "\n --- Request for register system shared memory region ---"
+               << "\n region_name: " << region_name 
+               << "\n byte_size: " << byte_size
+               << "\n offset: " << offset
+               << "\n********************************************" << std::endl;
+
           if (err == nullptr) {
             err = shm_manager_->RegisterSystemSharedMemory(
                 region_name, shm_key, offset, byte_size);
@@ -2334,6 +2341,10 @@ HTTPAPIServer::HandleSystemSharedMemory(
       }
     }
   } else if (action == "unregister") {
+    std::cerr << "************************* HTTPAPIServer::HandleSystemSharedMemory() ******************************"
+               << "\n --- Request for Unregister system shared memory region ---"
+               << "\n region_name: " << region_name
+               << "\n********************************************" << std::endl;
     if (region_name.empty()) {
       err = shm_manager_->UnregisterAll(TRITONSERVER_MEMORY_CPU);
     } else {
