@@ -2326,12 +2326,14 @@ HTTPAPIServer::HandleSystemSharedMemory(
             }
           }
 
-          std::cerr << "************************* HTTPAPIServer::HandleSystemSharedMemory() ******************************"
-               << "\n --- Request for register system shared memory region ---"
-               << "\n region_name: " << region_name 
-               << "\n byte_size: " << byte_size
-               << "\n offset: " << offset
-               << "\n********************************************" << std::endl;
+          std::cerr
+              << "************************* "
+                 "HTTPAPIServer::HandleSystemSharedMemory() "
+                 "******************************"
+              << "\n --- Request for register system shared memory region ---"
+              << "\n region_name: " << region_name
+              << "\n byte_size: " << byte_size << "\n offset: " << offset
+              << "\n********************************************" << std::endl;
 
           if (err == nullptr) {
             err = shm_manager_->RegisterSystemSharedMemory(
@@ -2341,10 +2343,12 @@ HTTPAPIServer::HandleSystemSharedMemory(
       }
     }
   } else if (action == "unregister") {
-    std::cerr << "************************* HTTPAPIServer::HandleSystemSharedMemory() ******************************"
-               << "\n --- Request for Unregister system shared memory region ---"
-               << "\n region_name: " << region_name
-               << "\n********************************************" << std::endl;
+    std::cerr << "************************* "
+                 "HTTPAPIServer::HandleSystemSharedMemory() "
+                 "******************************"
+              << "\n --- Request for Unregister system shared memory region ---"
+              << "\n region_name: " << region_name
+              << "\n********************************************" << std::endl;
     if (region_name.empty()) {
       err = shm_manager_->UnregisterAll(TRITONSERVER_MEMORY_CPU);
     } else {
@@ -2721,6 +2725,7 @@ HTTPAPIServer::ParseJsonTritonIO(
                   irequest, input_name, base, buffer_attributes));
 #endif
         } else {
+          RETURN_IF_ERR(shm_manager->IncrementRefCount(shm_region));
           RETURN_IF_ERR(TRITONSERVER_InferenceRequestAppendInputData(
               irequest, input_name, base, byte_size, memory_type,
               memory_type_id));
@@ -2821,6 +2826,7 @@ HTTPAPIServer::ParseJsonTritonIO(
                   reinterpret_cast<char*>(cuda_handle))));
 #endif
         } else {
+          RETURN_IF_ERR(shm_manager->IncrementRefCount(shm_region));
           infer_req->alloc_payload_.output_map_.emplace(
               std::piecewise_construct, std::forward_as_tuple(output_name),
               std::forward_as_tuple(new AllocPayload::OutputInfo(

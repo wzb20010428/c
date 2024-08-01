@@ -349,6 +349,7 @@ InferAllocatorPayload(
             ShmInfo(base, byte_size, memory_type, memory_type_id, cuda_handle));
 #endif
       } else {
+        RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name));
         alloc_payload->shm_map_.emplace(
             io.name(), ShmInfo(
                            base, byte_size, memory_type, memory_type_id,

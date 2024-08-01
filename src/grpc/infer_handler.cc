@@ -441,6 +441,8 @@ InferGRPCToInput(
             region_name,
             reinterpret_cast<cudaIpcMemHandle_t**>(&cuda_ipc_handle)));
 #endif
+      } else {
+        RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name));
       }
     } else {
       if (io.has_contents() && (!request.raw_input_contents().empty())) {
