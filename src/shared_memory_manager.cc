@@ -621,7 +621,7 @@ SharedMemoryManager::GetStatus(
       RETURN_IF_ERR(shm_region.AddUInt("device_id", it->second->device_id_));
     }
     RETURN_IF_ERR(shm_region.AddUInt("byte_size", it->second->byte_size_));
-    RETURN_IF_ERR(shm_region.AddUInt("ref_count", shm_info.second->ref_count_));
+    RETURN_IF_ERR(shm_region.AddUInt("ref_count", it->second->ref_count_));
     RETURN_IF_ERR(shm_status->Append(std::move(shm_region)));
   }
 
@@ -730,7 +730,7 @@ SharedMemoryManager::UnregisterHelper(
         return TRITONSERVER_ErrorNew(
             TRITONSERVER_ERROR_INTERNAL,
             std::string(
-                "Cannot unregister shared memory region: '" + name
+                "Cannot unregister shared memory region: '" + name +
                 "', it is still in use.")
                 .c_str());
       }
