@@ -654,6 +654,7 @@ SharedMemoryManager::UnregisterAll(TRITONSERVER_MemoryType memory_type)
         TRITONSERVER_Error* err = UnregisterHelper(it->first, memory_type);
         if (err != nullptr) {
           unregister_fails.push_back(it->first);
+          LOG_VERBOSE(1) << TRITONSERVER_ErrorMessage(err);
         }
       }
     }
