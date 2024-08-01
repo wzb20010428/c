@@ -93,7 +93,7 @@ class Barrier {
 struct RequestReleasePayload final {
   explicit RequestReleasePayload(
       const std::shared_ptr<TRITONSERVER_InferenceRequest>& inference_request)
-      : inference_request_(inference_request){};
+      : inference_request_(inference_request) {};
 
  private:
   std::shared_ptr<TRITONSERVER_InferenceRequest> inference_request_ = nullptr;
@@ -336,8 +336,8 @@ InferAllocatorPayload(
       TRITONSERVER_MemoryType memory_type;
       int64_t memory_type_id;
       RETURN_IF_ERR(shm_manager->GetMemoryInfo(
-          region_name, offset, byte_size, &base, &memory_type,
-          &memory_type_id));
+          region_name, offset, byte_size, &base, &memory_type, &memory_type_id,
+          nullptr /* ref_count */));
 
       if (memory_type == TRITONSERVER_MEMORY_GPU) {
 #ifdef TRITON_ENABLE_GPU

@@ -2697,7 +2697,7 @@ HTTPAPIServer::ParseJsonTritonIO(
         int64_t memory_type_id;
         RETURN_IF_ERR(shm_manager_->GetMemoryInfo(
             shm_region, shm_offset, byte_size, &base, &memory_type,
-            &memory_type_id));
+            &memory_type_id, nullptr /* ref_count */));
         if (memory_type == TRITONSERVER_MEMORY_GPU) {
 #ifdef TRITON_ENABLE_GPU
           cudaIpcMemHandle_t* cuda_handle;
@@ -2725,7 +2725,7 @@ HTTPAPIServer::ParseJsonTritonIO(
                   irequest, input_name, base, buffer_attributes));
 #endif
         } else {
-          RETURN_IF_ERR(shm_manager->IncrementRefCount(shm_region));
+          RETURN_IF_ERR(shm_manager_->IncrementRefCount(shm_region));
           RETURN_IF_ERR(TRITONSERVER_InferenceRequestAppendInputData(
               irequest, input_name, base, byte_size, memory_type,
               memory_type_id));
@@ -2812,8 +2812,8 @@ HTTPAPIServer::ParseJsonTritonIO(
         TRITONSERVER_MemoryType memory_type;
         int64_t memory_type_id;
         RETURN_IF_ERR(shm_manager_->GetMemoryInfo(
-            shm_region, offset, byte_size, &base, &memory_type,
-            &memory_type_id));
+            shm_region, offset, byte_size, &base, &memory_type, &memory_type_id,
+            nullptr /* ref_count */));
 
         if (memory_type == TRITONSERVER_MEMORY_GPU) {
 #ifdef TRITON_ENABLE_GPU
@@ -2826,7 +2826,7 @@ HTTPAPIServer::ParseJsonTritonIO(
                   reinterpret_cast<char*>(cuda_handle))));
 #endif
         } else {
-          RETURN_IF_ERR(shm_manager->IncrementRefCount(shm_region));
+          RETURN_IF_ERR(shm_manager_->IncrementRefCount(shm_region));
           infer_req->alloc_payload_.output_map_.emplace(
               std::piecewise_construct, std::forward_as_tuple(output_name),
               std::forward_as_tuple(new AllocPayload::OutputInfo(
