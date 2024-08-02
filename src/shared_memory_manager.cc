@@ -692,7 +692,6 @@ SharedMemoryManager::IncrementRefCount(const std::string& name)
       << "************************** SharedMemoryManager::IncrementRefCount() "
          "***********************"
       << "\nname: " << name;
-  << "\ncurrent count: " << it->second->ref_count_;
   // protect shared_memory_map_ from concurrent access
   std::lock_guard<std::mutex> lock(mu_);
 
