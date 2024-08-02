@@ -2726,6 +2726,7 @@ HTTPAPIServer::ParseJsonTritonIO(
                   irequest, input_name, base, buffer_attributes));
 #endif
         } else {
+          std::cerr << "----------- Detected shm Input: " << shm_region << " -----------\n calling IncrementRefCount() ..." << std::endl;
           RETURN_IF_ERR(shm_manager_->IncrementRefCount(shm_region));
           RETURN_IF_ERR(TRITONSERVER_InferenceRequestAppendInputData(
               irequest, input_name, base, byte_size, memory_type,
@@ -2828,6 +2829,7 @@ HTTPAPIServer::ParseJsonTritonIO(
                   reinterpret_cast<char*>(cuda_handle))));
 #endif
         } else {
+          std::cerr << "----------- Detected shm output: " << shm_region << " -----------\n calling IncrementRefCount() ..." << std::endl;
           RETURN_IF_ERR(shm_manager_->IncrementRefCount(shm_region));
           infer_req->alloc_payload_.output_map_.emplace(
               std::piecewise_construct, std::forward_as_tuple(output_name),

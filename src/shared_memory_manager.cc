@@ -688,6 +688,11 @@ SharedMemoryManager::UnregisterAll(TRITONSERVER_MemoryType memory_type)
 TRITONSERVER_Error*
 SharedMemoryManager::IncrementRefCount(const std::string& name)
 {
+  std::cerr
+      << "************************** SharedMemoryManager::IncrementRefCount() "
+         "***********************"
+      << "\nname: " << name;
+  << "\ncurrent count: " << it->second->ref_count_;
   // protect shared_memory_map_ from concurrent access
   std::lock_guard<std::mutex> lock(mu_);
 
@@ -698,7 +703,11 @@ SharedMemoryManager::IncrementRefCount(const std::string& name)
         std::string("Unable to find shared memory region: '" + name + "'")
             .c_str());
   }
+  std::cerr << "\nBefore increment, count: " << it->second->ref_count_;
   ++(it->second->ref_count_);
+  std::cerr << "\nAfter increment, count: " << it->second->ref_count_
+            << "\n*************************************************"
+            << std::endl;
   return nullptr;
 }
 
@@ -732,7 +741,8 @@ SharedMemoryManager::UnregisterHelper(
             TRITONSERVER_ERROR_INTERNAL,
             std::string(
                 "Cannot unregister shared memory region: '" + name +
-                "', it is still in use.")
+                "', it is being used by " +
+                std::to_string(it->second->ref_count_) + " requests.")
                 .c_str());
       }
       RETURN_IF_ERR(
