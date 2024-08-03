@@ -2603,7 +2603,7 @@ HTTPAPIServer::ParseJsonTritonIO(
       "Unable to parse 'inputs'");
 
   int& v_idx = *v_idx_ptr;
-  std::set<std::string> system_mem_shm_regions;
+  std::set<std::string> io_shm_regions;
   for (size_t i = 0; i < inputs_json.ArraySize(); i++) {
     triton::common::TritonJson::Value request_input;
     RETURN_IF_ERR(inputs_json.At(i, &request_input));
@@ -2728,7 +2728,7 @@ HTTPAPIServer::ParseJsonTritonIO(
 #endif
         } else {
           std::cerr << "----------- Detected shm Input: " << shm_region << std::endl;
-          system_mem_shm_regions.insert(shm_region);
+          io_shm_regions.insert(shm_region);
           RETURN_IF_ERR(TRITONSERVER_InferenceRequestAppendInputData(
               irequest, input_name, base, byte_size, memory_type,
               memory_type_id));
@@ -2832,7 +2832,7 @@ HTTPAPIServer::ParseJsonTritonIO(
         } else {
           std::cerr << "----------- Detected shm output: " << shm_region
                     << std::endl;
-          system_mem_shm_regions.insert(shm_region);
+          io_shm_regions.insert(shm_region);
           infer_req->alloc_payload_.output_map_.emplace(
               std::piecewise_construct, std::forward_as_tuple(output_name),
               std::forward_as_tuple(new AllocPayload::OutputInfo(
@@ -2852,8 +2852,8 @@ HTTPAPIServer::ParseJsonTritonIO(
     }
   }
 
-  if (!system_mem_shm_regions.empty()) {
-    for (const auto& region_name : system_mem_shm_regions) {
+  if (!io_shm_regions.empty()) {
+    for (const auto& region_name : io_shm_regions) {
       RETURN_IF_ERR(shm_manager_->IncrementRefCount(region_name));
     }
   }

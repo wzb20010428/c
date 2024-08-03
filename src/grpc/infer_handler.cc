@@ -396,7 +396,7 @@ InferGRPCToInput(
   // Verify that the batch-byte-size of each input matches the size of
   // the provided tensor data (provided raw or from shared memory)
   int index = 0;
-  std::set<std::string> system_mem_shm_regions;
+  std::set<std::string> io_shm_regions;
   for (const auto& io : request.inputs()) {
     const void* base;
     size_t byte_size = 0;
@@ -445,7 +445,7 @@ InferGRPCToInput(
             reinterpret_cast<cudaIpcMemHandle_t**>(&cuda_ipc_handle)));
 #endif
       } else {
-        system_mem_shm_regions.insert(region_name);
+        io_shm_regions.insert(region_name);
       }
     } else {
       if (io.has_contents() && (!request.raw_input_contents().empty())) {
@@ -642,9 +642,9 @@ InferGRPCToInput(
             inference_request, io.name().c_str(), base, buffer_attributes));
   }
 
-  if (!system_mem_shm_regions.empty()) {
-    for (const auto& region_name : system_mem_shm_regions) {
-      RETURN_IF_ERR(shm_manager_->IncrementRefCount(region_name));
+  if (!io_shm_regions.empty()) {
+    for (const auto& region_name : io_shm_regions) {
+      RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name));
     }
   }
 
