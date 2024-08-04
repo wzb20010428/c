@@ -445,7 +445,10 @@ InferGRPCToInput(
             reinterpret_cast<cudaIpcMemHandle_t**>(&cuda_ipc_handle)));
 #endif
       } else {
-        io_shm_regions.insert(region_name);
+        auto it = io_shm_regions.insert(region_name);
+        if (it.second) {
+          RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name));
+        }
       }
     } else {
       if (io.has_contents() && (!request.raw_input_contents().empty())) {
@@ -640,12 +643,6 @@ InferGRPCToInput(
     RETURN_IF_ERR(
         TRITONSERVER_InferenceRequestAppendInputDataWithBufferAttributes(
             inference_request, io.name().c_str(), base, buffer_attributes));
-  }
-
-  if (!io_shm_regions.empty()) {
-    for (const auto& region_name : io_shm_regions) {
-      RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name));
-    }
   }
 
   return nullptr;  // success
