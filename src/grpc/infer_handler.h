@@ -353,7 +353,7 @@ InferAllocatorPayload(
       } else {
         bool is_added;
         RETURN_IF_ERR(TRITONSERVER_InferenceRequestAddRefShmRegion(
-            inference_request, region_name, &is_added));
+            inference_request, region_name.c_str(), &is_added));
         if (is_added) {
           RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name));
         }
