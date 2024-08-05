@@ -2603,7 +2603,6 @@ HTTPAPIServer::ParseJsonTritonIO(
       "Unable to parse 'inputs'");
 
   int& v_idx = *v_idx_ptr;
-  std::set<std::string> io_shm_regions;
   for (size_t i = 0; i < inputs_json.ArraySize(); i++) {
     triton::common::TritonJson::Value request_input;
     RETURN_IF_ERR(inputs_json.At(i, &request_input));
@@ -2729,8 +2728,10 @@ HTTPAPIServer::ParseJsonTritonIO(
         } else {
           std::cerr << "----------- Detected shm Input: " << shm_region
                     << std::endl;
-          auto it = io_shm_regions.insert(shm_region);
-          if (it.second) {
+
+          RETURN_IF_ERR(TRITONSERVER_InferenceRequestAddRefShmRegion(
+              irequest, shm_region, &is_added));
+          if (is_added) {
             RETURN_IF_ERR(shm_manager_->IncrementRefCount(shm_region));
           }
 
@@ -2837,8 +2838,9 @@ HTTPAPIServer::ParseJsonTritonIO(
         } else {
           std::cerr << "----------- Detected shm output: " << shm_region
                     << std::endl;
-          auto it = io_shm_regions.insert(shm_region);
-          if (it.second) {
+          RETURN_IF_ERR(TRITONSERVER_InferenceRequestAddRefShmRegion(
+              irequest, shm_region, &is_added));
+          if (is_added) {
             RETURN_IF_ERR(shm_manager_->IncrementRefCount(shm_region));
           }
 

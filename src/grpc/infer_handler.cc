@@ -396,7 +396,6 @@ InferGRPCToInput(
   // Verify that the batch-byte-size of each input matches the size of
   // the provided tensor data (provided raw or from shared memory)
   int index = 0;
-  std::set<std::string> io_shm_regions;
   for (const auto& io : request.inputs()) {
     const void* base;
     size_t byte_size = 0;
@@ -445,8 +444,10 @@ InferGRPCToInput(
             reinterpret_cast<cudaIpcMemHandle_t**>(&cuda_ipc_handle)));
 #endif
       } else {
-        auto it = io_shm_regions.insert(region_name);
-        if (it.second) {
+        bool is_added;
+        RETURN_IF_ERR(TRITONSERVER_InferenceRequestAddRefShmRegion(
+            inference_request, region_name, &is_added));
+        if (is_added) {
           RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name));
         }
       }

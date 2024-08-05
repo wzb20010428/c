@@ -310,7 +310,6 @@ InferAllocatorPayload(
   // the memory address for that output and store it in the allocator
   // payload so that it is available when the allocation callback is
   // invoked.
-  std::set<std::string> io_shm_regions;
   for (const auto& io : request.outputs()) {
     std::string region_name;
     int64_t offset;
@@ -351,8 +350,10 @@ InferAllocatorPayload(
             ShmInfo(base, byte_size, memory_type, memory_type_id, cuda_handle));
 #endif
       } else {
-        auto it = io_shm_regions.insert(region_name);
-        if (it.second) {
+        bool is_added;
+        RETURN_IF_ERR(TRITONSERVER_InferenceRequestAddRefShmRegion(
+            inference_request, region_name, &is_added));
+        if (is_added) {
           RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name));
         }
 
