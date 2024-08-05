@@ -448,7 +448,7 @@ InferGRPCToInput(
         RETURN_IF_ERR(TRITONSERVER_InferenceRequestAddRefShmRegion(
             inference_request, region_name, &is_added));
         if (is_added) {
-          RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name));
+          RETURN_IF_ERR(shm_manager->IncrementRefCount(region_name.c_str()));
         }
       }
     } else {
@@ -927,7 +927,7 @@ ModelInferHandler::Execute(InferHandler::State* state)
   if (err == nullptr) {
     err = InferAllocatorPayload<inference::ModelInferResponse>(
         tritonserver_, shm_manager_, request, std::move(serialized_data),
-        response_queue, &state->alloc_payload_);
+        response_queue, &state->alloc_payload_, irequest);
   }
 
   auto request_release_payload =

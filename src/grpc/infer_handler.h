@@ -299,7 +299,8 @@ InferAllocatorPayload(
     const inference::ModelInferRequest& request,
     std::list<std::string>&& serialized_data,
     std::shared_ptr<ResponseQueue<ResponseType>> response_queue,
-    AllocPayload<ResponseType>* alloc_payload)
+    AllocPayload<ResponseType>* alloc_payload,
+    TRITONSERVER_InferenceRequest* inference_request)
 {
   alloc_payload->response_queue_ = response_queue;
   alloc_payload->shm_map_.clear();
