@@ -2729,7 +2729,7 @@ HTTPAPIServer::ParseJsonTritonIO(
           std::cerr << "----------- Detected shm Input: " << shm_region
                     << std::endl;
 
-          bool is_added;
+          bool is_added = false;
           RETURN_IF_ERR(TRITONSERVER_InferenceRequestAddRefShmRegion(
               irequest, shm_region, &is_added));
           if (is_added) {
@@ -2839,7 +2839,7 @@ HTTPAPIServer::ParseJsonTritonIO(
         } else {
           std::cerr << "----------- Detected shm output: " << shm_region
                     << std::endl;
-          bool is_added;
+          bool is_added = false;
           RETURN_IF_ERR(TRITONSERVER_InferenceRequestAddRefShmRegion(
               irequest, shm_region, &is_added));
           if (is_added) {

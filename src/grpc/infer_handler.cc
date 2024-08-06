@@ -444,7 +444,7 @@ InferGRPCToInput(
             reinterpret_cast<cudaIpcMemHandle_t**>(&cuda_ipc_handle)));
 #endif
       } else {
-        bool is_added;
+        bool is_added = false;
         RETURN_IF_ERR(TRITONSERVER_InferenceRequestAddRefShmRegion(
             inference_request, region_name.c_str(), &is_added));
         if (is_added) {
