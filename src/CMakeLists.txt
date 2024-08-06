@@ -1,4 +1,4 @@
-# Copyright 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -105,7 +105,17 @@ add_executable(
   common.h
   shared_memory_manager.h
   triton_signal.h
+  server_interface.h
 )
+
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+add_library(server-interface-library server_interface.h)
+set_target_properties(server-interface-library
+                      PROPERTIES
+                      POSITION_INDEPENDENT_CODE ON
+                      LINKER_LANGUAGE CXX)
+target_compile_features(server-interface-library PRIVATE cxx_std_${TRITON_MIN_CXX_STANDARD})
+target_compile_definitions(server-interface-library PRIVATE TRITON_MIN_COMPUTE_CAPABILITY=${TRITON_MIN_COMPUTE_CAPABILITY})
 
 # On windows a *.lib file can be generated for a exe. When creating
 # tritonserver.exe if we try to create tritonserver.lib it will fail
@@ -777,3 +787,43 @@ endif() # NOT WIN32
 if ( NOT WIN32)
   add_subdirectory(test test)
 endif() # NOT WIN32
+
+find_package(CUDAToolkit REQUIRED)
+
+# TODO: Remove excess stuff
+add_library(
+  python-binding-dependency
+  EXCLUDE_FROM_ALL
+  shared_memory_manager.h
+  shared_memory_manager.cc
+  data_compressor.h
+  common.h
+  common.cc
+  restricted_features.h
+  tracer.h
+  classification.cc
+)
+
+target_link_libraries(
+  python-binding-dependency
+  PUBLIC
+  http-endpoint-library
+  grpc-endpoint-library
+  CUDA::cudart
+  triton-core-serverapi           # from repo-core
+  triton-core-serverstub          # from repo-core
+  triton-common-json              # from repo-common
+)
+
+
+set_target_properties(python-binding-dependency PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+target_compile_features(python-binding-dependency PRIVATE cxx_std_${TRITON_MIN_CXX_STANDARD})
+
+target_compile_definitions(
+    python-binding-dependency
+    PRIVATE TRITON_ENABLE_GPU=1
+    PRIVATE TRITON_MIN_COMPUTE_CAPABILITY=${TRITON_MIN_COMPUTE_CAPABILITY}
+  )
+
+add_subdirectory(python python)

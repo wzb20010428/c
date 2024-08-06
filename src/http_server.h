@@ -35,7 +35,6 @@
 #include <queue>
 #include <string>
 #include <thread>
-#include <unordered_map>
 
 #include "common.h"
 #include "data_compressor.h"
@@ -183,6 +182,17 @@ using HttpTextMapCarrier = void*;
 #endif
 
 
+using VariantType = std::variant<int, bool, std::string>;
+using UnorderedMapType = std::unordered_map<std::string, VariantType>;
+
+template <typename T>
+T
+get_value(const UnorderedMapType& options, const std::string& key)
+{
+  auto curr = options.find(key);
+  return std::get<T>(curr->second);
+}
+
 // HTTP API server that implements KFServing community standard inference
 // protocols and extensions used by Triton.
 class HTTPAPIServer : public HTTPServer {
@@ -195,6 +205,12 @@ class HTTPAPIServer : public HTTPServer {
       const std::string& header_forward_pattern, const int thread_cnt,
       const RestrictedFeatures& restricted_apis,
       std::unique_ptr<HTTPServer>* http_server);
+
+
+  static bool CreateWrapper(
+      std::shared_ptr<TRITONSERVER_Server>& server, UnorderedMapType& data,
+      std::unique_ptr<HTTPServer>* service,
+      const RestrictedFeatures& restricted_features);
 
   virtual ~HTTPAPIServer();
 
