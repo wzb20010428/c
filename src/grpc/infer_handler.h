@@ -642,7 +642,8 @@ class InferHandlerState {
         ::grpc::ServerCompletionQueue* cq, const uint64_t unique_id = 0)
         : cq_(cq), unique_id_(unique_id), ongoing_requests_(0),
           step_(Steps::START), finish_ok_(true), ongoing_write_(false),
-          received_notification_(false)
+          received_notification_(false), grpc_strict_(false),
+          grpc_stream_error_state_(false)
     {
       ctx_.reset(new ::grpc::ServerContext());
       responder_.reset(new ServerResponderType(ctx_.get()));
@@ -669,6 +670,33 @@ class InferHandlerState {
       return received_notification_ ? ctx_->IsCancelled() : false;
     }
 
+    // Extracts headers from GRPC request and updates state
+    void ExtractStateFromHeaders(InferHandlerStateType* state)
+    {
+      const auto& metadata = state->context_->ctx_->client_metadata();
+      for (const auto& pair : metadata) {
+        auto& key = pair.first;
+        std::string param_key = std::string(key.begin(), key.end());
+        std::string grpc_strict_key = "grpc_strict";
+        if (param_key.compare(grpc_strict_key) == 0) {
+          state->context_->grpc_strict_ = true;
+        }
+      }
+    }
+
+    void sendGRPCStrictResponse(InferHandlerStateType* state)
+    {
+      std::lock_guard<std::recursive_mutex> lock(state->context_->mu_);
+      // Check if Error not responded previously
+      // Avoid closing connection twice on multiple errors from core
+      if (!state->context_->IsGRPCStrictError()) {
+        state->context_->responder_->Finish(state->status_, state);
+        // Mark error for this stream
+        state->context_->MarkGRPCStrictError();
+        // Fix Me : Last argument not sure for HandleCancellation
+        state->context_->HandleCancellation(state, true, "grpc_strict_name");
+      }
+    }
     // Increments the ongoing request counter
     void IncrementRequestCounter() { ongoing_requests_++; }
 
@@ -779,6 +807,9 @@ class InferHandlerState {
             // The RPC is complete and no callback will be invoked to retrieve
             // the object. Hence, need to explicitly place the state on the
             // completion queue.
+            LOG_VERBOSE(1)
+                << "PutTaskBackToQueue inside IssueRequestCancellation for "
+                << state->unique_id_;
             PutTaskBackToQueue(state);
           }
         }
@@ -816,7 +847,6 @@ class InferHandlerState {
           IssueRequestCancellation();
           // Mark the context as cancelled
           state->context_->step_ = Steps::CANCELLED;
-
           // The state returns true because the CancelExecution
           // call above would have raised alarm objects on all
           // pending inflight states objects. This state will
@@ -941,6 +971,12 @@ class InferHandlerState {
       return false;
     }
 
+    // Marks error after it has been responded to
+    void MarkGRPCStrictError() { grpc_stream_error_state_ = true; }
+
+    // Checks if error already responded to in grpc_strict mode
+    bool IsGRPCStrictError() { return grpc_stream_error_state_; }
+
     // Return true if this context has completed all reads and writes.
     bool IsRequestsCompleted()
     {
@@ -999,6 +1035,13 @@ class InferHandlerState {
     // Tracks whether the async notification has been delivered by
     // completion queue.
     bool received_notification_;
+
+    // True if set by user via header
+    std::atomic<bool> grpc_strict_;
+
+    // True if stream already encountered error and closed connection
+    // State maintained to avoid writes on closed stream
+    std::atomic<bool> grpc_stream_error_state_;
   };
 
   // This constructor is used to build a wrapper state object
@@ -1090,7 +1133,6 @@ class InferHandlerState {
 
   void MarkAsAsyncNotifyState() { async_notify_state_ = true; }
   bool IsAsyncNotifyState() { return async_notify_state_; }
-
   // Needed in the response handle for classification outputs.
   TRITONSERVER_Server* tritonserver_;
 
@@ -1314,6 +1356,7 @@ InferHandler<
         LOG_VERBOSE(1) << "Received notification for " << Name() << ", "
                        << state->unique_id_;
       }
+      LOG_VERBOSE(2) << "Inside Next " << state->unique_id_;
       LOG_VERBOSE(2) << "Grpc::CQ::Next() "
                      << state->context_->DebugString(state);
       if (!Process(state, ok)) {
